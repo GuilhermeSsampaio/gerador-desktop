@@ -1,0 +1,15 @@
+body {
+  background-color: #f8f9fa;
+  padding-bottom: 2rem;
+}
+
+.card {
+  border-radius: 10px;
+  border: none;
+}
+
+pre {
+  max-height: 300px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}

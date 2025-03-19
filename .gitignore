@@ -1,0 +1,14 @@
+
+
+arquivos-entrega/*
+node_modules/
+screenshots
+venv
+
+
+# Ignorar todos os arquivos de cache do Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
