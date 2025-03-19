@@ -1,57 +1,103 @@
-# Gerador de Documentação Automática
+# Assistente de Documentação Automática
 
-Este projeto gera documentos Word e PDF contendo códigos-fonte organizados a partir de diretórios específicos, formatando os arquivos corretamente e incluindo uma assinatura ao final.
+Esta aplicação desktop oferece ferramentas para facilitar a documentação de projetos de software, incluindo geração automática de documentação a partir dos códigos-fonte e captura automática de screenshots.
+
+![Interface da Aplicação](./screenshots/app_interface.png)
 
 ## Funcionalidades
 
-- Gera um documento `.docx` e um `.pdf` automaticamente.
-- Ordena arquivos e pastas alfabeticamente.
+### Gerador de Documentação
+
+- Gera documentos `.docx` e `.pdf` automaticamente a partir do código-fonte.
+- Organiza arquivos por diretório com suporte a backend, frontend e outros diretórios.
 - Formata corretamente os títulos e o conteúdo dos arquivos.
-- Ignora diretórios `node_modules` e arquivos `.env` (exceto quando explicitamente solicitado).
-- Inclui cabeçalho centralizado e um rodapé com local, data e assinatura.
+- Ignora automaticamente diretórios e arquivos de configuração comuns.
+- Inclui cabeçalho centralizado e rodapé com local, data e assinatura.
+
+### Ferramenta de Screenshots
+
+- Captura automaticamente screenshots de aplicações web.
+- Permite configurar URL base, tipo de usuário e dados de formulários.
+- Documenta fluxos completos de interface (login, formulários, confirmações).
+- Salva imagens em alta qualidade para inclusão em documentação.
 
 ## Tecnologias Utilizadas
 
-- Python
+### Frontend
+
+- Electron (aplicação desktop)
+- React
+- Bootstrap para interface de usuário
+
+### Backend
+
+- Node.js para o runtime Electron
+- Python para geração de documentação
+- Puppeteer para automação de capturas de tela
+
+### Bibliotecas
+
 - `python-docx` (para gerar documentos Word)
 - `docx2pdf` (para converter Word para PDF)
+- `puppeteer` (para automação de navegadores)
 
 ## Instalação
 
-1. Clone o repositório (dentro da pasta de LPIII - que deve contar os subdiretórios front-end e back-end):
+1. Clone o repositório:
 
 ```sh
-git clone [https://github.com/GuilhermeSsampaio/gerador-documents-lp.git](https://github.com/GuilhermeSsampaio/gerador)
-cd gerador
+git clone https://github.com/GuilhermeSsampaio/gerador-desktop
+cd gerador-desktop
 ```
 
-2. Execute o script principal para gerar os documentos:
-crie o venv:
+2. Configure o ambiente de desenvolvimento automaticamente:
+
 ```sh
-python -m venv venv
-
+npm run setup
 ```
+
+Este comando irá:
+
+- Criar um ambiente virtual Python
+- Instalar dependências Python
+- Instalar dependências Node.js
+
+3. Para iniciar a aplicação:
+
 ```sh
-python startGerador.py
+npm start
 ```
 
-3. Insira seu nome e o número da entrega
+## Como Usar
 
-4. Revise os docs
+### Gerador de Documentação
 
-5. Assine
+1. Selecione os diretórios do projeto (backend, frontend, outros)
+2. Preencha seu nome e o número da entrega
+3. Escolha se deseja incluir arquivos .env
+4. Clique em "Gerar Documentação"
+5. Os arquivos serão gerados na pasta `arquivos-entrega`
 
-Os arquivos serão gerados na pasta raiz do projeto (DO GERADOR).
+### Ferramenta de Screenshots
+
+1. Selecione a aba "Captura de Screenshots"
+2. Configure a URL base da aplicação (ex: http://localhost:3000)
+3. Configure o tipo de usuário e os dados para preenchimento
+4. Clique em "Capturar Screenshots"
+5. As capturas serão salvas na pasta `screenshots`
 
 ## Estrutura dos Arquivos Gerados
 
-- O documento gerado contém um cabeçalho com o título do trabalho.
-- Cada arquivo é listado em uma página separada com seu nome formatado como `diretório.arquivo : nome_do_arquivo`.
-- No final, há uma seção com a data e um espaço para assinatura.
+- Documentos DOCX/PDF com título e nome da entrega
+- Cada arquivo de código-fonte é listado com formato `diretório.arquivo : caminho/do/arquivo`
+- Screenshots salvos com nomes descritivos (ex: `formulario_preenchido.png`)
+- Local, data e espaço para assinatura ao final dos documentos
 
-## Corrigir
+## Requisitos do Sistema
 
-- corrigir a ordem que aparecem os arquivos
+- Node.js 14+
+- Python 3.8+
+- Windows, macOS ou Linux
 
 ## Licença
 
