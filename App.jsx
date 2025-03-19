@@ -1,20 +1,69 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import "./styles.css";
+
+// Lista de arquivos e diretórios ignorados por padrão
+const defaultIgnoredDirs = [
+  "node_modules",
+  ".git",
+  ".vscode",
+  "__pycache__",
+  "venv",
+  "dist",
+  "build",
+  ".next",
+];
+
+const defaultIgnoredFiles = [
+  ".DS_Store",
+  ".env.local",
+  ".env.example",
+  "ormconfig.ts",
+  "tsconfig.json",
+  "package.json",
+  ".env.development",
+  ".gitignore",
+  "package-lock.json",
+  "yarn.lock",
+];
 
 function App() {
   const [formData, setFormData] = useState({
     name: "",
     entrega: "",
-    includeDirs: [], // Agora é um array em vez de uma string
-    outputFilename: "",
+    includeDirs: [], // Manter para compatibilidade, mas será derivado
+    backendDir: "",
+    frontendDir: "",
+    otherDirs: [], // Novos diretórios que não são nem front nem back
     includeEnv: false,
   });
 
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [showIgnoredFiles, setShowIgnoredFiles] = useState(false);
+
+  // Efeito para atualizar includeDirs quando outros campos mudam
+  useEffect(() => {
+    const dirs = [];
+
+    if (formData.backendDir) {
+      dirs.push(formData.backendDir);
+    }
+
+    if (formData.frontendDir) {
+      dirs.push(formData.frontendDir);
+    }
+
+    // Adiciona outros diretórios
+    dirs.push(...formData.otherDirs);
+
+    setFormData((prev) => ({
+      ...prev,
+      includeDirs: dirs,
+    }));
+  }, [formData.backendDir, formData.frontendDir, formData.otherDirs]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -24,25 +73,57 @@ function App() {
     }));
   };
 
-  const handleSelectDirectory = async () => {
+  const handleSelectDirectory = async (type) => {
     try {
       const dir = await window.electron.selectDirectory();
       if (dir) {
-        setFormData((prev) => ({
-          ...prev,
-          includeDirs: [...prev.includeDirs, dir],
-        }));
+        if (type === "backend") {
+          setFormData((prev) => ({
+            ...prev,
+            backendDir: dir,
+          }));
+        } else if (type === "frontend") {
+          setFormData((prev) => ({
+            ...prev,
+            frontendDir: dir,
+          }));
+        } else {
+          // Adiciona como diretório genérico
+          setFormData((prev) => {
+            // Evita duplicatas
+            if (
+              !prev.otherDirs.includes(dir) &&
+              dir !== prev.backendDir &&
+              dir !== prev.frontendDir
+            ) {
+              return {
+                ...prev,
+                otherDirs: [...prev.otherDirs, dir],
+              };
+            }
+            return prev;
+          });
+        }
       }
     } catch (err) {
       console.error("Erro ao selecionar diretório:", err);
     }
   };
 
-  const removeDirectory = (index) => {
-    setFormData((prev) => ({
-      ...prev,
-      includeDirs: prev.includeDirs.filter((_, i) => i !== index),
-    }));
+  const removeDirectory = (dir) => {
+    setFormData((prev) => {
+      // Se for o frontend ou backend, zere o campo específico
+      const newState = { ...prev };
+      if (dir === prev.backendDir) {
+        newState.backendDir = "";
+      } else if (dir === prev.frontendDir) {
+        newState.frontendDir = "";
+      } else {
+        // Remove dos outros diretórios
+        newState.otherDirs = prev.otherDirs.filter((d) => d !== dir);
+      }
+      return newState;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -52,21 +133,143 @@ function App() {
     setError(null);
 
     try {
-      const response = await window.electron.generateDocumentation({
-        name: formData.name,
-        entrega: formData.entrega,
-        includeDirs: formData.includeDirs,
-        outputFilename: formData.outputFilename,
-        includeEnv: formData.includeEnv,
-      });
+      // Array para armazenar todos os resultados
+      const allResults = [];
 
-      setResult(response.output);
+      // Gerar para o backend se selecionado
+      if (formData.backendDir) {
+        const backendResult = await window.electron.generateDocumentation({
+          name: formData.name,
+          entrega: formData.entrega,
+          includeDirs: [formData.backendDir],
+          outputFilename: "back-end",
+          includeEnv: formData.includeEnv,
+        });
+        allResults.push("--- Backend ---\n" + backendResult.output);
+      }
+
+      // Gerar para o frontend se selecionado
+      if (formData.frontendDir) {
+        const frontendResult = await window.electron.generateDocumentation({
+          name: formData.name,
+          entrega: formData.entrega,
+          includeDirs: [formData.frontendDir],
+          outputFilename: "front-end",
+          includeEnv: formData.includeEnv,
+        });
+        allResults.push("--- Frontend ---\n" + frontendResult.output);
+      }
+
+      // Gerar para cada outro diretório
+      for (let i = 0; i < formData.otherDirs.length; i++) {
+        const dir = formData.otherDirs[i];
+        // Usar o nome da pasta como nome do arquivo
+        const folderName = dir.split("\\").pop().split("/").pop();
+        const outputName = `outro-${folderName}`;
+
+        const otherResult = await window.electron.generateDocumentation({
+          name: formData.name,
+          entrega: formData.entrega,
+          includeDirs: [dir],
+          outputFilename: outputName,
+          includeEnv: formData.includeEnv,
+        });
+        allResults.push(`--- ${folderName} ---\n` + otherResult.output);
+      }
+
+      // Combinar todos os resultados
+      setResult(allResults.join("\n\n"));
     } catch (err) {
       console.error("Erro na geração:", err);
       setError(err.error || "Ocorreu um erro ao gerar a documentação.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const renderDirectoryList = () => {
+    // Lista combinada de diretórios para exibição
+    const allDirs = [
+      ...(formData.backendDir
+        ? [{ path: formData.backendDir, type: "backend" }]
+        : []),
+      ...(formData.frontendDir
+        ? [{ path: formData.frontendDir, type: "frontend" }]
+        : []),
+      ...formData.otherDirs.map((dir) => ({ path: dir, type: "other" })),
+    ];
+
+    if (allDirs.length === 0) {
+      return (
+        <div className="alert alert-warning">
+          <i className="bi bi-exclamation-triangle me-2"></i>
+          Nenhum diretório selecionado
+        </div>
+      );
+    }
+
+    return (
+      <div className="list-group mt-2">
+        {allDirs.map((item, index) => {
+          const icon =
+            item.type === "backend"
+              ? "bi-hdd-rack"
+              : item.type === "frontend"
+              ? "bi-window"
+              : "bi-folder";
+
+          const prefix =
+            item.type === "backend"
+              ? "Backend"
+              : item.type === "frontend"
+              ? "Frontend"
+              : "Outro";
+
+          const outputName =
+            item.type === "backend"
+              ? "backend.docx/pdf"
+              : item.type === "frontend"
+              ? "frontend.docx/pdf"
+              : `outro-${item.path
+                  .split("\\")
+                  .pop()
+                  .split("/")
+                  .pop()}.docx/pdf`;
+
+          return (
+            <div
+              key={index}
+              className="list-group-item d-flex justify-content-between align-items-center"
+            >
+              <div className="d-flex flex-column">
+                <div className="d-flex align-items-center">
+                  <i className={`bi ${icon} me-2`}></i>
+                  <span
+                    className="text-truncate"
+                    style={{ maxWidth: "400px" }}
+                    title={item.path}
+                  >
+                    <strong>{prefix}: </strong>
+                    {item.path}
+                  </span>
+                </div>
+                <small className="text-muted ms-4">
+                  <i className="bi bi-file-earmark me-1"></i>
+                  Gerará: {outputName}
+                </small>
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-danger"
+                onClick={() => removeDirectory(item.path)}
+              >
+                <i className="bi bi-trash"></i>
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   return (
@@ -114,63 +317,50 @@ function App() {
                 </div>
 
                 <div className="mb-3">
-                  <label className="form-label">Diretórios a Incluir</label>
-                  <div className="d-flex">
+                  <label className="form-label">Diretórios do Projeto</label>
+
+                  <div className="d-flex flex-wrap gap-2 mb-3">
                     <button
                       type="button"
-                      className="btn btn-outline-primary mb-2"
-                      onClick={handleSelectDirectory}
+                      className={`btn ${
+                        formData.backendDir
+                          ? "btn-success"
+                          : "btn-outline-primary"
+                      }`}
+                      onClick={() => handleSelectDirectory("backend")}
+                    >
+                      <i className="bi bi-hdd-rack me-2"></i>
+                      {formData.backendDir
+                        ? "Backend Selecionado"
+                        : "Selecionar Backend"}
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`btn ${
+                        formData.frontendDir
+                          ? "btn-success"
+                          : "btn-outline-primary"
+                      }`}
+                      onClick={() => handleSelectDirectory("frontend")}
+                    >
+                      <i className="bi bi-window me-2"></i>
+                      {formData.frontendDir
+                        ? "Frontend Selecionado"
+                        : "Selecionar Frontend"}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      onClick={() => handleSelectDirectory("other")}
                     >
                       <i className="bi bi-folder-plus me-2"></i>
-                      Selecionar Diretório
+                      Adicionar Outro Diretório
                     </button>
                   </div>
 
-                  {formData.includeDirs.length > 0 ? (
-                    <div className="list-group mt-2">
-                      {formData.includeDirs.map((dir, index) => (
-                        <div
-                          key={index}
-                          className="list-group-item d-flex justify-content-between align-items-center"
-                        >
-                          <span
-                            className="text-truncate"
-                            style={{ maxWidth: "80%" }}
-                          >
-                            {dir}
-                          </span>
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-outline-danger"
-                            onClick={() => removeDirectory(index)}
-                          >
-                            <i className="bi bi-trash"></i>
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="alert alert-warning mt-2">
-                      <i className="bi bi-exclamation-triangle me-2"></i>
-                      Nenhum diretório selecionado
-                    </div>
-                  )}
-                </div>
-
-                <div className="mb-3">
-                  <label htmlFor="outputFilename" className="form-label">
-                    Nome do Arquivo de Saída (sem extensão)
-                  </label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    id="outputFilename"
-                    name="outputFilename"
-                    value={formData.outputFilename}
-                    onChange={handleChange}
-                    placeholder="Ex: entrega1"
-                    required
-                  />
+                  {renderDirectoryList()}
                 </div>
 
                 <div className="mb-3 form-check">
@@ -185,6 +375,55 @@ function App() {
                   <label className="form-check-label" htmlFor="includeEnv">
                     Incluir arquivos .env
                   </label>
+                </div>
+
+                <div className="mb-4">
+                  <button
+                    type="button"
+                    className="btn btn-link p-0"
+                    onClick={() => setShowIgnoredFiles(!showIgnoredFiles)}
+                  >
+                    <i
+                      className={`bi ${
+                        showIgnoredFiles
+                          ? "bi-chevron-down"
+                          : "bi-chevron-right"
+                      } me-1`}
+                    ></i>
+                    {showIgnoredFiles ? "Ocultar" : "Mostrar"} arquivos
+                    ignorados por padrão
+                  </button>
+
+                  {showIgnoredFiles && (
+                    <div className="mt-2 p-3 bg-light rounded border">
+                      <div className="mb-2">
+                        <strong>Diretórios ignorados:</strong>
+                        <div className="d-flex flex-wrap gap-1 mt-1">
+                          {defaultIgnoredDirs.map((dir, i) => (
+                            <span
+                              key={i}
+                              className="badge bg-secondary me-1 mb-1"
+                            >
+                              {dir}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <strong>Arquivos ignorados:</strong>
+                        <div className="d-flex flex-wrap gap-1 mt-1">
+                          {defaultIgnoredFiles.map((file, i) => (
+                            <span
+                              key={i}
+                              className="badge bg-secondary me-1 mb-1"
+                            >
+                              {file}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <button
