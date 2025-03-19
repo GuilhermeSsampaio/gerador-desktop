@@ -2,15 +2,13 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 console.log("Preload script está sendo executado");
 
-contextBridge.exposeInMainWorld("electron", {
-  // Aqui podemos expor funções para o front-end
-  generateDocumentation: (args) => {
-    console.log("Chamando função generateDocumentation com argumentos:", args);
-    return ipcRenderer.invoke("run-generator", args);
-  },
-
-  // Nova função para selecionar diretórios
+contextBridge.exposeInMainWorld("electronAPI", {
+  // Funções existentes
+  runGenerator: (args) => ipcRenderer.invoke("run-generator", args),
   selectDirectory: () => ipcRenderer.invoke("select-directory"),
+
+  // Nova função para tirar screenshots
+  takeScreenshots: (config) => ipcRenderer.invoke("take-screenshots", config),
 });
 
-console.log("API do Electron exposta:", window.electron);
+console.log("API do Electron exposta:", "electronAPI"); // Corrigido para mostrar o nome correto

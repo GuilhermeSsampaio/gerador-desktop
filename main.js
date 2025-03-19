@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
 const { spawn } = require("child_process");
+const screenshotModule = require("./screenshots");
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -16,7 +17,7 @@ function createWindow() {
   win.loadURL("http://localhost:5173"); // Vite roda nessa porta
 
   // Abrir DevTools em desenvolvimento para depuração
-  win.webContents.openDevTools();
+  // win.webContents.openDevTools();
 }
 
 app.whenReady().then(createWindow);
@@ -106,4 +107,30 @@ ipcMain.handle("select-directory", async () => {
 // Adicionar um manipulador de erros não tratados para depuração
 process.on("uncaughtException", (error) => {
   console.error("Erro não tratado:", error);
+});
+
+ipcMain.handle("take-screenshots", async (event, args) => {
+  const { baseUrl, userType, formData, specificData } = args;
+  console.log("Recebidos atributos para screenshots:", args);
+
+  try {
+    const result = await screenshotModule.executarTestes({
+      baseUrl: baseUrl || "http://localhost:3000",
+      userType: userType || "Maestro",
+      formData: formData || {},
+      specificData: specificData || {},
+    });
+
+    return {
+      success: true,
+      message: "Screenshots capturados com sucesso",
+      screenshotPaths: result,
+    };
+  } catch (error) {
+    console.error("Erro ao capturar screenshots:", error);
+    return {
+      success: false,
+      error: error.message || "Erro desconhecido ao capturar screenshots",
+    };
+  }
 });

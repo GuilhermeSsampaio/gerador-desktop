@@ -1,7 +1,19 @@
 import os
 import datetime
 import argparse
-from docx2pdf import convert
+
+# Tenta importar docx2pdf, mas não falha se não encontrar
+try:
+    from docx2pdf import convert
+
+    PDF_AVAILABLE = True
+except ImportError:
+    PDF_AVAILABLE = False
+    print(
+        "AVISO: O módulo 'docx2pdf' não está instalado. Os documentos serão gerados apenas em formato DOCX."
+    )
+    print("Para instalar o módulo, execute: pip install docx2pdf")
+
 import format_docx as doc_format
 from functools import (
     cmp_to_key,
@@ -240,11 +252,17 @@ def generate_document(
     doc_format.save_document(doc, docx_path)
     print(f"Documento DOCX salvo em: {docx_path}")
 
-    try:
-        convert(docx_path, pdf_path)
-        print(f"Documento PDF salvo em: {pdf_path}")
-    except Exception as e:
-        print(f"Erro ao converter para PDF: {str(e)}")
+    # Verifica se o PDF pode ser gerado
+    if PDF_AVAILABLE:
+        try:
+            convert(docx_path, pdf_path)
+            print(f"Documento PDF salvo em: {pdf_path}")
+        except Exception as e:
+            print(f"Erro ao converter para PDF: {str(e)}")
+    else:
+        print(
+            "Conversão para PDF ignorada, pois o módulo 'docx2pdf' não está disponível."
+        )
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import "./styles.css";
+import { ScreenshotTool } from "./src/components/ScreenshotTool"; // Importa o componente ScreenshotTool
 
 // Lista de arquivos e diretórios ignorados por padrão
 const defaultIgnoredDirs = [
@@ -39,6 +40,9 @@ function App() {
     includeEnv: false,
   });
 
+  // Estado para controlar qual ferramenta está ativa (documentação ou screenshots)
+  const [activeTab, setActiveTab] = useState("docs");
+
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -75,7 +79,8 @@ function App() {
 
   const handleSelectDirectory = async (type) => {
     try {
-      const dir = await window.electron.selectDirectory();
+      // Corrigido de window.electron para window.electronAPI
+      const dir = await window.electronAPI.selectDirectory();
       if (dir) {
         if (type === "backend") {
           setFormData((prev) => ({
@@ -138,7 +143,8 @@ function App() {
 
       // Gerar para o backend se selecionado
       if (formData.backendDir) {
-        const backendResult = await window.electron.generateDocumentation({
+        // Corrigido de window.electron para window.electronAPI
+        const backendResult = await window.electronAPI.runGenerator({
           name: formData.name,
           entrega: formData.entrega,
           includeDirs: [formData.backendDir],
@@ -150,7 +156,8 @@ function App() {
 
       // Gerar para o frontend se selecionado
       if (formData.frontendDir) {
-        const frontendResult = await window.electron.generateDocumentation({
+        // Corrigido de window.electron para window.electronAPI
+        const frontendResult = await window.electronAPI.runGenerator({
           name: formData.name,
           entrega: formData.entrega,
           includeDirs: [formData.frontendDir],
@@ -167,7 +174,8 @@ function App() {
         const folderName = dir.split("\\").pop().split("/").pop();
         const outputName = `outro-${folderName}`;
 
-        const otherResult = await window.electron.generateDocumentation({
+        // Corrigido de window.electron para window.electronAPI
+        const otherResult = await window.electronAPI.runGenerator({
           name: formData.name,
           entrega: formData.entrega,
           includeDirs: [dir],
@@ -181,7 +189,24 @@ function App() {
       setResult(allResults.join("\n\n"));
     } catch (err) {
       console.error("Erro na geração:", err);
-      setError(err.error || "Ocorreu um erro ao gerar a documentação.");
+
+      // Verifica se é o erro específico de módulo docx2pdf não encontrado
+      if (
+        err.error &&
+        err.error.includes("ModuleNotFoundError: No module named 'docx2pdf'")
+      ) {
+        setError(
+          "O módulo 'docx2pdf' não está instalado. Os documentos foram gerados apenas em formato DOCX.\n\n" +
+            "Para instalar o módulo, execute: pip install docx2pdf\n\n" +
+            "Você pode continuar usando a aplicação normalmente com arquivos DOCX."
+        );
+        // Define um resultado parcial para mostrar que os arquivos DOCX foram gerados
+        setResult(
+          "Os arquivos DOCX foram gerados com sucesso na pasta arquivos-entrega.\nA conversão para PDF foi ignorada devido à falta do módulo 'docx2pdf'."
+        );
+      } else {
+        setError(err.error || "Ocorreu um erro ao gerar a documentação.");
+      }
     } finally {
       setLoading(false);
     }
@@ -274,201 +299,249 @@ function App() {
 
   return (
     <div className="container py-4">
-      <header className="mb-5 text-center">
-        <h1 className="mb-3">Gerador de Documentação Automática</h1>
+      <header className="mb-4 text-center">
+        <h1 className="mb-3">Assistente de Documentação Automática</h1>
         <p className="lead">
-          Gere documentos .docx e .pdf com seu código-fonte formatado
+          Gere documentos e capture screenshots para seus projetos
         </p>
       </header>
 
+      {/* Navegação para alternar entre as ferramentas */}
+      <div className="row mb-4">
+        <div className="col-lg-8 mx-auto">
+          <ul className="nav nav-pills nav-fill">
+            <li className="nav-item">
+              <button
+                className={`nav-link ${activeTab === "docs" ? "active" : ""}`}
+                onClick={() => setActiveTab("docs")}
+              >
+                <i className="bi bi-file-earmark-text me-2"></i>
+                Gerador de Documentação
+              </button>
+            </li>
+            <li className="nav-item">
+              <button
+                className={`nav-link ${
+                  activeTab === "screenshots" ? "active" : ""
+                }`}
+                onClick={() => setActiveTab("screenshots")}
+              >
+                <i className="bi bi-camera me-2"></i>
+                Captura de Screenshots
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+
       <div className="row">
         <div className="col-lg-8 mx-auto">
-          <div className="card shadow">
-            <div className="card-body">
-              <form onSubmit={handleSubmit}>
-                <div className="mb-3">
-                  <label htmlFor="name" className="form-label">
-                    Nome Completo
-                  </label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-
-                <div className="mb-3">
-                  <label htmlFor="entrega" className="form-label">
-                    Número da Entrega
-                  </label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    id="entrega"
-                    name="entrega"
-                    value={formData.entrega}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label">Diretórios do Projeto</label>
-
-                  <div className="d-flex flex-wrap gap-2 mb-3">
-                    <button
-                      type="button"
-                      className={`btn ${
-                        formData.backendDir
-                          ? "btn-success"
-                          : "btn-outline-primary"
-                      }`}
-                      onClick={() => handleSelectDirectory("backend")}
-                    >
-                      <i className="bi bi-hdd-rack me-2"></i>
-                      {formData.backendDir
-                        ? "Backend Selecionado"
-                        : "Selecionar Backend"}
-                    </button>
-
-                    <button
-                      type="button"
-                      className={`btn ${
-                        formData.frontendDir
-                          ? "btn-success"
-                          : "btn-outline-primary"
-                      }`}
-                      onClick={() => handleSelectDirectory("frontend")}
-                    >
-                      <i className="bi bi-window me-2"></i>
-                      {formData.frontendDir
-                        ? "Frontend Selecionado"
-                        : "Selecionar Frontend"}
-                    </button>
-
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary"
-                      onClick={() => handleSelectDirectory("other")}
-                    >
-                      <i className="bi bi-folder-plus me-2"></i>
-                      Adicionar Outro Diretório
-                    </button>
-                  </div>
-
-                  {renderDirectoryList()}
-                </div>
-
-                <div className="mb-3 form-check">
-                  <input
-                    type="checkbox"
-                    className="form-check-input"
-                    id="includeEnv"
-                    name="includeEnv"
-                    checked={formData.includeEnv}
-                    onChange={handleChange}
-                  />
-                  <label className="form-check-label" htmlFor="includeEnv">
-                    Incluir arquivos .env
-                  </label>
-                </div>
-
-                <div className="mb-4">
-                  <button
-                    type="button"
-                    className="btn btn-link p-0"
-                    onClick={() => setShowIgnoredFiles(!showIgnoredFiles)}
-                  >
-                    <i
-                      className={`bi ${
-                        showIgnoredFiles
-                          ? "bi-chevron-down"
-                          : "bi-chevron-right"
-                      } me-1`}
-                    ></i>
-                    {showIgnoredFiles ? "Ocultar" : "Mostrar"} arquivos
-                    ignorados por padrão
-                  </button>
-
-                  {showIgnoredFiles && (
-                    <div className="mt-2 p-3 bg-light rounded border">
-                      <div className="mb-2">
-                        <strong>Diretórios ignorados:</strong>
-                        <div className="d-flex flex-wrap gap-1 mt-1">
-                          {defaultIgnoredDirs.map((dir, i) => (
-                            <span
-                              key={i}
-                              className="badge bg-secondary me-1 mb-1"
-                            >
-                              {dir}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <strong>Arquivos ignorados:</strong>
-                        <div className="d-flex flex-wrap gap-1 mt-1">
-                          {defaultIgnoredFiles.map((file, i) => (
-                            <span
-                              key={i}
-                              className="badge bg-secondary me-1 mb-1"
-                            >
-                              {file}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
+          {/* Condicional para mostrar a ferramenta selecionada */}
+          {activeTab === "docs" ? (
+            /* Ferramenta de geração de documentação */
+            <>
+              <div className="card shadow">
+                <div className="card-body">
+                  <form onSubmit={handleSubmit}>
+                    <div className="mb-3">
+                      <label htmlFor="name" className="form-label">
+                        Nome Completo
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        id="name"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        required
+                      />
                     </div>
-                  )}
+
+                    <div className="mb-3">
+                      <label htmlFor="entrega" className="form-label">
+                        Número da Entrega
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        id="entrega"
+                        name="entrega"
+                        value={formData.entrega}
+                        onChange={handleChange}
+                        required
+                      />
+                    </div>
+
+                    <div className="mb-3">
+                      <label className="form-label">
+                        Diretórios do Projeto
+                      </label>
+
+                      <div className="d-flex flex-wrap gap-2 mb-3">
+                        <button
+                          type="button"
+                          className={`btn ${
+                            formData.backendDir
+                              ? "btn-success"
+                              : "btn-outline-primary"
+                          }`}
+                          onClick={() => handleSelectDirectory("backend")}
+                        >
+                          <i className="bi bi-hdd-rack me-2"></i>
+                          {formData.backendDir
+                            ? "Backend Selecionado"
+                            : "Selecionar Backend"}
+                        </button>
+
+                        <button
+                          type="button"
+                          className={`btn ${
+                            formData.frontendDir
+                              ? "btn-success"
+                              : "btn-outline-primary"
+                          }`}
+                          onClick={() => handleSelectDirectory("frontend")}
+                        >
+                          <i className="bi bi-window me-2"></i>
+                          {formData.frontendDir
+                            ? "Frontend Selecionado"
+                            : "Selecionar Frontend"}
+                        </button>
+
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary"
+                          onClick={() => handleSelectDirectory("other")}
+                        >
+                          <i className="bi bi-folder-plus me-2"></i>
+                          Adicionar Outro Diretório
+                        </button>
+                      </div>
+
+                      {renderDirectoryList()}
+                    </div>
+
+                    <div className="mb-3 form-check">
+                      <input
+                        type="checkbox"
+                        className="form-check-input"
+                        id="includeEnv"
+                        name="includeEnv"
+                        checked={formData.includeEnv}
+                        onChange={handleChange}
+                      />
+                      <label className="form-check-label" htmlFor="includeEnv">
+                        Incluir arquivos .env
+                      </label>
+                    </div>
+
+                    <div className="mb-4">
+                      <button
+                        type="button"
+                        className="btn btn-link p-0"
+                        onClick={() => setShowIgnoredFiles(!showIgnoredFiles)}
+                      >
+                        <i
+                          className={`bi ${
+                            showIgnoredFiles
+                              ? "bi-chevron-down"
+                              : "bi-chevron-right"
+                          } me-1`}
+                        ></i>
+                        {showIgnoredFiles ? "Ocultar" : "Mostrar"} arquivos
+                        ignorados por padrão
+                      </button>
+
+                      {showIgnoredFiles && (
+                        <div className="mt-2 p-3 bg-light rounded border">
+                          <div className="mb-2">
+                            <strong>Diretórios ignorados:</strong>
+                            <div className="d-flex flex-wrap gap-1 mt-1">
+                              {defaultIgnoredDirs.map((dir, i) => (
+                                <span
+                                  key={i}
+                                  className="badge bg-secondary me-1 mb-1"
+                                >
+                                  {dir}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <strong>Arquivos ignorados:</strong>
+                            <div className="d-flex flex-wrap gap-1 mt-1">
+                              {defaultIgnoredFiles.map((file, i) => (
+                                <span
+                                  key={i}
+                                  className="badge bg-secondary me-1 mb-1"
+                                >
+                                  {file}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="btn btn-primary w-100"
+                      disabled={loading || formData.includeDirs.length === 0}
+                    >
+                      {loading ? (
+                        <>
+                          <span
+                            className="spinner-border spinner-border-sm me-2"
+                            role="status"
+                            aria-hidden="true"
+                          ></span>
+                          Gerando documentação...
+                        </>
+                      ) : (
+                        <>
+                          <i className="bi bi-file-earmark-text me-2"></i>
+                          Gerar Documentação
+                        </>
+                      )}
+                    </button>
+                  </form>
                 </div>
+              </div>
 
-                <button
-                  type="submit"
-                  className="btn btn-primary w-100"
-                  disabled={loading || formData.includeDirs.length === 0}
-                >
-                  {loading ? (
-                    <>
-                      <span
-                        className="spinner-border spinner-border-sm me-2"
-                        role="status"
-                        aria-hidden="true"
-                      ></span>
-                      Gerando documentação...
-                    </>
-                  ) : (
-                    <>
-                      <i className="bi bi-file-earmark-text me-2"></i>
-                      Gerar Documentação
-                    </>
-                  )}
-                </button>
-              </form>
-            </div>
-          </div>
+              {error && (
+                <div className="alert alert-danger mt-4">
+                  <h5>
+                    <i className="bi bi-exclamation-triangle-fill me-2"></i>Erro
+                  </h5>
+                  <pre className="mt-2 p-2 bg-light rounded">{error}</pre>
+                </div>
+              )}
 
-          {error && (
-            <div className="alert alert-danger mt-4">
-              <h5>
-                <i className="bi bi-exclamation-triangle-fill me-2"></i>Erro
-              </h5>
-              <pre className="mt-2 p-2 bg-light rounded">{error}</pre>
-            </div>
-          )}
-
-          {result && (
-            <div className="alert alert-success mt-4">
-              <h5>
-                <i className="bi bi-check-circle-fill me-2"></i>Sucesso
-              </h5>
-              <pre className="mt-2 p-2 bg-light rounded">{result}</pre>
-              <p className="mt-3 mb-0">
-                Os arquivos foram gerados na pasta <code>arquivos-entrega</code>
-              </p>
+              {result && (
+                <div className="alert alert-success mt-4">
+                  <h5>
+                    <i className="bi bi-check-circle-fill me-2"></i>Sucesso
+                  </h5>
+                  <pre className="mt-2 p-2 bg-light rounded">{result}</pre>
+                  <p className="mt-3 mb-0">
+                    Os arquivos foram gerados na pasta{" "}
+                    <code>arquivos-entrega</code>
+                  </p>
+                </div>
+              )}
+            </>
+          ) : (
+            /* Ferramenta de captura de screenshots */
+            <div className="card shadow">
+              <div className="card-body">
+                <h4 className="card-title mb-4">
+                  <i className="bi bi-camera me-2"></i>
+                  Ferramenta de Screenshots
+                </h4>
+                <ScreenshotTool />
+              </div>
             </div>
           )}
         </div>

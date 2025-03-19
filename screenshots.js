@@ -17,6 +17,7 @@ async function takeScreenshot(page, filename) {
   const screenshotPath = path.join(screenshotDir, filename);
   await page.screenshot({ path: screenshotPath, fullPage: true });
   console.log(`✅ Screenshot salvo em: ${screenshotPath}`);
+  return screenshotPath;
 }
 
 /**
@@ -69,12 +70,14 @@ async function clickButtonByText(page, buttonText, contextSelector = null) {
 /**
  * Screenshot da página de login para usuário não cadastrado.
  */
-async function screenshotLoginPage() {
-  const { browser, page } = await openPage("http://localhost:3000/");
+async function screenshotLoginPage(baseUrl = "http://localhost:3000/") {
+  const { browser, page } = await openPage(baseUrl);
   try {
-    await takeScreenshot(page, "pagina_inicial.png");
+    const screenshotPath = await takeScreenshot(page, "pagina_inicial.png");
+    return screenshotPath;
   } catch (error) {
     console.error("Erro ao acessar a página inicial:", error);
+    throw error;
   } finally {
     await browser.close();
   }
@@ -83,12 +86,13 @@ async function screenshotLoginPage() {
 /**
  * Preenche o formulário com dados errados para exibir as mensagens de erro.
  */
-async function fillFormWithErrors() {
-  const { browser, page } = await openPage(
-    "http://localhost:3000/criar-usuario"
-  );
+async function fillFormWithErrors(
+  baseUrl = "http://localhost:3000",
+  userType = "Maestro"
+) {
+  const { browser, page } = await openPage(`${baseUrl}/criar-usuario`);
   try {
-    await selectDropdownItem(page, ".p-dropdown", "Maestro");
+    await selectDropdownItem(page, ".p-dropdown", userType);
 
     await page.waitForSelector('input[name="cpf"]');
     await page.type('input[name="cpf"]', "163.456.789-40");
@@ -105,9 +109,14 @@ async function fillFormWithErrors() {
     await delay(100);
     await clickButtonByText(page, "Salvar");
     await delay(100);
-    await takeScreenshot(page, "formulario_enviado_erros.png");
+    const screenshotPath = await takeScreenshot(
+      page,
+      "formulario_enviado_erros.png"
+    );
+    return screenshotPath;
   } catch (error) {
     console.error("Erro ao preencher e enviar o formulário:", error);
+    throw error;
   } finally {
     await browser.close();
   }
@@ -117,35 +126,57 @@ async function fillFormWithErrors() {
  * Preenche o formulário corretamente, exibe o modal de confirmação e, após confirmação,
  * preenche os dados específicos da próxima tela.
  */
-async function fillFormCorrectly() {
-  const { browser, page } = await openPage(
-    "http://localhost:3000/criar-usuario"
-  );
+async function fillFormCorrectly(
+  baseUrl = "http://localhost:3000",
+  userType = "Maestro",
+  formData = {},
+  specificData = {}
+) {
+  const { browser, page } = await openPage(`${baseUrl}/criar-usuario`);
+  const screenshotPaths = [];
+
   try {
     // Preenchimento do formulário principal
-    await selectDropdownItem(page, ".p-dropdown", "Maestro");
+    await selectDropdownItem(page, ".p-dropdown", userType);
     await page.waitForSelector('input[name="cpf"]');
-    await page.type('input[name="cpf"]', "123.456.719-49");
-    await page.type('input[name="nome"]', "Jõao Arrocha");
-    await page.type('input[name="email"]', "joaoomaestro@gmail.com");
-    await page.type('input[name="senha"]', "senha123");
-    await page.type('input[name="confirmação"]', "senha123");
-    await page.type(
-      'input[name="questão"]',
-      "Qual o nome do seu primeiro pet?"
-    );
-    await page.type('input[name="resposta"]', "Rex");
+
+    // Usa dados fornecidos ou valores padrão
+    const userData = {
+      cpf: "123.456.719-49",
+      nome: "João Arrocha",
+      email: "joaoomaestro@gmail.com",
+      senha: "senha123",
+      confirmacao: "senha123",
+      questao: "Qual o nome do seu primeiro pet?",
+      resposta: "Rex",
+      ...formData,
+    };
+
+    await page.type('input[name="cpf"]', userData.cpf);
+    await page.type('input[name="nome"]', userData.nome);
+    await page.type('input[name="email"]', userData.email);
+    await page.type('input[name="senha"]', userData.senha);
+    await page.type('input[name="confirmação"]', userData.confirmacao);
+    await page.type('input[name="questão"]', userData.questao);
+    await page.type('input[name="resposta"]', userData.resposta);
 
     await delay(100);
-    await takeScreenshot(page, "form_preenchido_corretamente.png");
+    screenshotPaths.push(
+      await takeScreenshot(page, "form_preenchido_corretamente.png")
+    );
 
     // Exibe o modal de confirmação e clica em "Salvar" nele
-    await showConfirmationModal(page);
+    const confirmPath = await showConfirmationModal(page);
+    screenshotPaths.push(confirmPath);
 
     // Após confirmação, preenche dados específicos na próxima tela
-    await fillSpecificData(page);
+    const specificPaths = await fillSpecificData(page, specificData);
+    screenshotPaths.push(...specificPaths);
+
+    return screenshotPaths;
   } catch (error) {
     console.error("Erro ao preencher o formulário corretamente:", error);
+    throw error;
   } finally {
     await browser.close();
   }
@@ -165,54 +196,64 @@ async function showConfirmationModal(page) {
     document.body.style.zoom = "0.65";
   });
   await delay(100);
-  await takeScreenshot(page, "conferir.png");
+  const screenshotPath = await takeScreenshot(page, "conferir.png");
   await delay(100);
   // Clica em "Salvar" dentro do modal para confirmar
   await clickButtonByText(page, "Salvar", ".p-dialog.p-component");
   await delay(100);
+  return screenshotPath;
 }
 
 /**
  * Preenche os dados específicos da próxima tela após a confirmação do modal.
  */
-async function fillSpecificData(page) {
+async function fillSpecificData(page, specificData = {}) {
+  const screenshotPaths = [];
   await page.waitForSelector(".p-dropdown");
   const dropdowns = await page.$$(".p-dropdown");
 
-  // Seleciona o primeiro dropdown e escolhe "Elegante"
+  // Dados padrão mesclados com os fornecidos
+  const data = {
+    estilo: "Elegante",
+    origem: "Brasileiro",
+    experiencia: "20",
+    ...specificData,
+  };
+
+  // Seleciona o primeiro dropdown (estilo)
   await dropdowns[0].click();
   await page.waitForSelector(".p-dropdown-panel");
-  await page.evaluate(() => {
+  await page.evaluate((optionText) => {
     const items = Array.from(document.querySelectorAll("li.p-dropdown-item"));
-    const target = items.find((item) => item.textContent.trim() === "Elegante");
+    const target = items.find((item) => item.textContent.trim() === optionText);
     if (target) target.click();
-  });
+  }, data.estilo);
   await delay(100);
 
-  // Seleciona o segundo dropdown e escolhe "Brasileiro"
+  // Seleciona o segundo dropdown (origem)
   await dropdowns[1].click();
   await page.waitForSelector(".p-dropdown-panel");
-  await page.evaluate(() => {
+  await page.evaluate((optionText) => {
     const items = Array.from(document.querySelectorAll("li.p-dropdown-item"));
-    const target = items.find(
-      (item) => item.textContent.trim() === "Brasileiro"
-    );
+    const target = items.find((item) => item.textContent.trim() === optionText);
     if (target) target.click();
-  });
+  }, data.origem);
   await delay(100);
 
-  // Preenche o campo de anos de experiência usando a função auxiliar
+  // Preenche o campo de anos de experiência
   await fillInputNumberUsingKeyboard(
     page,
     'input[name="anos_experiência"]',
-    "20"
+    data.experiencia
   );
   await delay(100);
 
-  await takeScreenshot(page, "dados_especificos.png");
-  await delay(4000);
+  screenshotPaths.push(await takeScreenshot(page, "dados_especificos.png"));
+  await delay(2000);
   await clickButtonByText(page, "Cadastrar");
-  await takeScreenshot(page, "cadastro_finalizado.png");
+  screenshotPaths.push(await takeScreenshot(page, "cadastro_finalizado.png"));
+
+  return screenshotPaths;
 }
 
 // Função auxiliar para preencher o InputNumber via teclado
@@ -233,11 +274,41 @@ async function fillInputNumberUsingKeyboard(page, selector, value) {
 /**
  * Função principal que executa os testes desejados.
  */
-async function executarTestes() {
-  // Descomente conforme necessário:
-  await screenshotLoginPage();
-  await fillFormWithErrors();
-  await fillFormCorrectly();
+async function executarTestes(options = {}) {
+  const { baseUrl, userType, formData, specificData } = options;
+
+  const screenshotPaths = [];
+
+  try {
+    // Captura página de login
+    const loginPath = await screenshotLoginPage(baseUrl);
+    screenshotPaths.push(loginPath);
+
+    // Captura formulário com erros
+    const errorPath = await fillFormWithErrors(baseUrl, userType);
+    screenshotPaths.push(errorPath);
+
+    // Captura fluxo completo de formulário preenchido corretamente
+    const formPaths = await fillFormCorrectly(
+      baseUrl,
+      userType,
+      formData,
+      specificData
+    );
+    screenshotPaths.push(...formPaths);
+
+    return screenshotPaths;
+  } catch (error) {
+    console.error("Erro durante execução dos testes:", error);
+    throw error;
+  }
 }
 
-executarTestes();
+// Exportar funções para uso no electron
+module.exports = {
+  executarTestes,
+  screenshotLoginPage,
+  fillFormWithErrors,
+  fillFormCorrectly,
+  screenshotDir,
+};
