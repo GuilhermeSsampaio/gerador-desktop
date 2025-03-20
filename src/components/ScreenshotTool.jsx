@@ -28,7 +28,12 @@ export const ScreenshotTool = () => {
     },
   });
 
-  // Atualiza as configurações
+  // Estado para gerenciar os campos específicos do usuário
+  const [specificFields, setSpecificFields] = useState(
+    Object.entries(config.specificData).map(([key, value]) => ({ key, value }))
+  );
+
+  // Atualiza as configurações básicas
   const handleChange = (section, field, value) => {
     setConfig((prev) => ({
       ...prev,
@@ -37,6 +42,51 @@ export const ScreenshotTool = () => {
         [field]: value,
       },
     }));
+  };
+
+  // Função para atualizar o specificData no config quando specificFields mudar
+  const updateSpecificDataConfig = (updatedFields) => {
+    const newSpecificData = {};
+    updatedFields.forEach((field) => {
+      if (field.key.trim()) {
+        newSpecificData[field.key] = field.value;
+      }
+    });
+
+    setConfig((prev) => ({
+      ...prev,
+      specificData: newSpecificData,
+    }));
+  };
+
+  // Atualiza o nome/chave de um campo específico
+  const handleSpecificFieldKeyChange = (index, newKey) => {
+    const updatedFields = [...specificFields];
+    updatedFields[index].key = newKey;
+    setSpecificFields(updatedFields);
+    updateSpecificDataConfig(updatedFields);
+  };
+
+  // Atualiza o valor de um campo específico
+  const handleSpecificFieldValueChange = (index, newValue) => {
+    const updatedFields = [...specificFields];
+    updatedFields[index].value = newValue;
+    setSpecificFields(updatedFields);
+    updateSpecificDataConfig(updatedFields);
+  };
+
+  // Adiciona um novo campo específico
+  const addSpecificField = () => {
+    const updatedFields = [...specificFields, { key: "", value: "" }];
+    setSpecificFields(updatedFields);
+    updateSpecificDataConfig(updatedFields);
+  };
+
+  // Remove um campo específico
+  const removeSpecificField = (index) => {
+    const updatedFields = specificFields.filter((_, i) => i !== index);
+    setSpecificFields(updatedFields);
+    updateSpecificDataConfig(updatedFields);
   };
 
   // Função para iniciar a captura de screenshots
@@ -124,15 +174,13 @@ export const ScreenshotTool = () => {
 
         <div className="form-group">
           <label htmlFor="userType">Tipo de Usuário:</label>
-          <select
+          <input
+            type="text"
             id="userType"
             value={config.userType}
             onChange={(e) => setConfig({ ...config, userType: e.target.value })}
-          >
-            <option value="Maestro">Maestro</option>
-            <option value="Aluno">Aluno</option>
-            <option value="Professor">Professor</option>
-          </select>
+            placeholder="Digite o perfil do usuário"
+          />
         </div>
       </div>
 
@@ -155,19 +203,56 @@ export const ScreenshotTool = () => {
       {/* Dados específicos */}
       <div className="config-section">
         <h3>Dados Específicos</h3>
-        {Object.entries(config.specificData).map(([field, value]) => (
-          <div className="form-group" key={field}>
-            <label htmlFor={`specific-${field}`}>{field}:</label>
-            <input
-              type="text"
-              id={`specific-${field}`}
-              value={value}
-              onChange={(e) =>
-                handleChange("specificData", field, e.target.value)
-              }
-            />
+        <p className="text-muted small">
+          Defina os campos específicos do perfil selecionado. Você pode
+          adicionar, remover e editar os nomes dos campos conforme necessário.
+        </p>
+
+        {specificFields.map((field, index) => (
+          <div className="form-group specific-field-group" key={index}>
+            <div
+              className="d-flex align-items-center"
+              style={{ width: "100%" }}
+            >
+              <input
+                type="text"
+                className="form-control me-2"
+                placeholder="Nome do campo"
+                value={field.key}
+                onChange={(e) =>
+                  handleSpecificFieldKeyChange(index, e.target.value)
+                }
+              />
+              <input
+                type="text"
+                className="form-control me-2"
+                placeholder="Valor"
+                value={field.value}
+                onChange={(e) =>
+                  handleSpecificFieldValueChange(index, e.target.value)
+                }
+              />
+              <button
+                type="button"
+                className="btn btn-sm btn-danger"
+                onClick={() => removeSpecificField(index)}
+              >
+                <i className="bi bi-trash"></i>
+              </button>
+            </div>
           </div>
         ))}
+
+        <div className="mt-2">
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-primary"
+            onClick={addSpecificField}
+          >
+            <i className="bi bi-plus-circle me-1"></i>
+            Adicionar campo
+          </button>
+        </div>
       </div>
 
       <div className="actions">

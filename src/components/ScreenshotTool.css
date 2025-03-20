@@ -185,3 +185,38 @@
   background-color: #4caf50;
   color: white;
 }
+
+.specific-field-group {
+  margin-bottom: 8px;
+}
+
+.form-control {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.btn-sm {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.btn-danger {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
+}
+
+.text-muted {
+  color: #6c757d;
+}
+
+.small {
+  font-size: 80%;
+}
