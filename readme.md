@@ -62,6 +62,9 @@ Este comando irá:
 - Instalar dependências Python
 - Instalar dependências Node.js
 
+```sh
+npm install
+```
 3. Para iniciar a aplicação:
 
 ```sh
