@@ -2,7 +2,9 @@
 
 Esta aplicação desktop oferece ferramentas para facilitar a documentação de projetos de software, incluindo geração automática de documentação a partir dos códigos-fonte e captura automática de screenshots.
 
-<!-- ![Interface da Aplicação](./screenshots/app_interface.png) -->
+![Interface da Aplicação](./images/app_interface1.png)
+![Interface da Aplicação](./images/app_interface2.png)
+![Interface da Aplicação](./images/app_interface3.png)
 
 ## Funcionalidades
 
@@ -50,22 +52,19 @@ git clone https://github.com/GuilhermeSsampaio/gerador-desktop
 cd gerador-desktop
 ```
 
-2. Configure o ambiente de desenvolvimento automaticamente:
-
-```sh
-npm run setup
-```
-
-Este comando irá:
-
-- Criar um ambiente virtual Python
-- Instalar dependências Python
-- Instalar dependências Node.js
+2. Instale as dependências do node com npm
 
 ```sh
 npm install
 ```
-3. Para iniciar a aplicação:
+
+2. Crie o venv
+
+```sh
+python -m venv venv
+```
+
+3. Para ativar o venv, e instalar dependências do python (somente no windows) basta iniciar a aplicação:
 
 ```sh
 npm start
@@ -80,6 +79,7 @@ npm start
 3. Escolha se deseja incluir arquivos .env
 4. Clique em "Gerar Documentação"
 5. Os arquivos serão gerados na pasta `arquivos-entrega`
+6. Você pode escolher onde salvar
 
 ### Ferramenta de Screenshots
 
@@ -88,6 +88,7 @@ npm start
 3. Configure o tipo de usuário e os dados para preenchimento
 4. Clique em "Capturar Screenshots"
 5. As capturas serão salvas na pasta `screenshots`
+6. Você pode escolher onde salvar
 
 ## Estrutura dos Arquivos Gerados
 
