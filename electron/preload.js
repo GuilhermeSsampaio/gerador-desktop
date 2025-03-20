@@ -9,6 +9,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Nova função para tirar screenshots
   takeScreenshots: (config) => ipcRenderer.invoke("take-screenshots", config),
+
+  // Novas funções para gerenciar diretórios e movimentação de arquivos
+  selectSaveDirectory: () => ipcRenderer.invoke("select-save-directory"),
+  moveFiles: (args) => ipcRenderer.invoke("move-files", args),
 });
 
 console.log("API do Electron exposta:", "electronAPI"); // Corrigido para mostrar o nome correto

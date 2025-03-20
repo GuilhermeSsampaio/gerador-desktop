@@ -48,6 +48,10 @@ function App() {
   const [error, setError] = useState(null);
   const [showIgnoredFiles, setShowIgnoredFiles] = useState(false);
 
+  // Estado para armazenar informações sobre arquivos gerados
+  const [generatedFiles, setGeneratedFiles] = useState([]);
+  const [saveModalVisible, setSaveModalVisible] = useState(false);
+
   // Efeito para atualizar includeDirs quando outros campos mudam
   useEffect(() => {
     const dirs = [];
@@ -136,10 +140,12 @@ function App() {
     setLoading(true);
     setResult(null);
     setError(null);
+    setGeneratedFiles([]);
 
     try {
       // Array para armazenar todos os resultados
       const allResults = [];
+      const generatedFilesList = [];
 
       // Gerar para o backend se selecionado
       if (formData.backendDir) {
@@ -152,6 +158,12 @@ function App() {
           includeEnv: formData.includeEnv,
         });
         allResults.push("--- Backend ---\n" + backendResult.output);
+
+        // Adicionar arquivos gerados à lista
+        generatedFilesList.push(`arquivos-entrega/back-end.docx`);
+        if (backendResult.output.includes("PDF salvo")) {
+          generatedFilesList.push(`arquivos-entrega/back-end.pdf`);
+        }
       }
 
       // Gerar para o frontend se selecionado
@@ -165,6 +177,12 @@ function App() {
           includeEnv: formData.includeEnv,
         });
         allResults.push("--- Frontend ---\n" + frontendResult.output);
+
+        // Adicionar arquivos gerados à lista
+        generatedFilesList.push(`arquivos-entrega/front-end.docx`);
+        if (frontendResult.output.includes("PDF salvo")) {
+          generatedFilesList.push(`arquivos-entrega/front-end.pdf`);
+        }
       }
 
       // Gerar para cada outro diretório
@@ -183,10 +201,20 @@ function App() {
           includeEnv: formData.includeEnv,
         });
         allResults.push(`--- ${folderName} ---\n` + otherResult.output);
+
+        // Adicionar arquivos gerados à lista
+        generatedFilesList.push(`arquivos-entrega/${outputName}.docx`);
+        if (otherResult.output.includes("PDF salvo")) {
+          generatedFilesList.push(`arquivos-entrega/${outputName}.pdf`);
+        }
       }
 
       // Combinar todos os resultados
       setResult(allResults.join("\n\n"));
+      setGeneratedFiles(generatedFilesList);
+
+      // Exibir modal para perguntar se o usuário quer salvar os arquivos em outro local
+      setSaveModalVisible(true);
     } catch (err) {
       console.error("Erro na geração:", err);
 
@@ -204,12 +232,74 @@ function App() {
         setResult(
           "Os arquivos DOCX foram gerados com sucesso na pasta arquivos-entrega.\nA conversão para PDF foi ignorada devido à falta do módulo 'docx2pdf'."
         );
+
+        // Adicionar apenas arquivos DOCX à lista
+        setGeneratedFiles(
+          formData.includeDirs.map((dir, index) => {
+            const folderName = dir.split("\\").pop().split("/").pop();
+            const outputName =
+              index === 0
+                ? "back-end"
+                : index === 1
+                ? "front-end"
+                : `outro-${folderName}`;
+            return `arquivos-entrega/${outputName}.docx`;
+          })
+        );
+
+        // Exibir modal para perguntar se o usuário quer salvar os arquivos em outro local
+        setSaveModalVisible(true);
       } else {
         setError(err.error || "Ocorreu um erro ao gerar a documentação.");
       }
     } finally {
       setLoading(false);
     }
+  };
+
+  // Função para mover os arquivos para um diretório selecionado pelo usuário
+  const handleSaveToDirectory = async () => {
+    try {
+      // Pedir ao usuário para selecionar um diretório
+      const targetDir = await window.electronAPI.selectSaveDirectory();
+
+      if (!targetDir) {
+        setSaveModalVisible(false);
+        return; // Usuário cancelou
+      }
+
+      // Mover os arquivos para o diretório selecionado
+      const moveResult = await window.electronAPI.moveFiles({
+        sourceDir: "arquivos-entrega",
+        targetDir: targetDir,
+        fileList: generatedFiles,
+      });
+
+      if (moveResult.success) {
+        setResult(
+          (prev) =>
+            prev +
+            `\n\nArquivos movidos para: ${targetDir}\n${moveResult.message}`
+        );
+      } else {
+        setError(`Erro ao mover arquivos: ${moveResult.error}`);
+      }
+
+      setSaveModalVisible(false);
+    } catch (err) {
+      console.error("Erro ao salvar em outro diretório:", err);
+      setError(
+        `Erro ao salvar em outro diretório: ${
+          err.message || "Erro desconhecido"
+        }`
+      );
+      setSaveModalVisible(false);
+    }
+  };
+
+  // Função para fechar o modal e manter os arquivos no local original
+  const handleKeepFiles = () => {
+    setSaveModalVisible(false);
   };
 
   const renderDirectoryList = () => {
@@ -529,6 +619,75 @@ function App() {
                     Os arquivos foram gerados na pasta{" "}
                     <code>arquivos-entrega</code>
                   </p>
+
+                  {!saveModalVisible && generatedFiles.length > 0 && (
+                    <div className="mt-3">
+                      <button
+                        className="btn btn-outline-primary"
+                        onClick={() => setSaveModalVisible(true)}
+                      >
+                        <i className="bi bi-folder-symlink me-2"></i>
+                        Salvar arquivos em outro local
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Modal para perguntar se quer mover os arquivos */}
+              {saveModalVisible && (
+                <div
+                  className="modal show d-block"
+                  tabIndex="-1"
+                  style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+                >
+                  <div className="modal-dialog">
+                    <div className="modal-content">
+                      <div className="modal-header">
+                        <h5 className="modal-title">Salvar arquivos</h5>
+                        <button
+                          type="button"
+                          className="btn-close"
+                          onClick={handleKeepFiles}
+                        ></button>
+                      </div>
+                      <div className="modal-body">
+                        <p>
+                          Os arquivos foram gerados com sucesso na pasta padrão{" "}
+                          <code>arquivos-entrega</code>.
+                        </p>
+                        <p>
+                          Deseja salvar os arquivos em outro local? Os arquivos
+                          serão movidos do local atual.
+                        </p>
+                        <div className="mt-2">
+                          <strong>Arquivos gerados:</strong>
+                          <ul className="mt-2">
+                            {generatedFiles.map((file, index) => (
+                              <li key={index}>{file}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                      <div className="modal-footer">
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={handleKeepFiles}
+                        >
+                          Manter no local atual
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          onClick={handleSaveToDirectory}
+                        >
+                          <i className="bi bi-folder-symlink me-2"></i>
+                          Escolher outro local
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </>

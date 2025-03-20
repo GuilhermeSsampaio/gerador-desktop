@@ -2,7 +2,7 @@
 
 Esta aplicação desktop oferece ferramentas para facilitar a documentação de projetos de software, incluindo geração automática de documentação a partir dos códigos-fonte e captura automática de screenshots.
 
-![Interface da Aplicação](./screenshots/app_interface.png)
+<!-- ![Interface da Aplicação](./screenshots/app_interface.png) -->
 
 ## Funcionalidades
 

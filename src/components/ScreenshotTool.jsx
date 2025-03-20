@@ -5,6 +5,8 @@ export const ScreenshotTool = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [saveModalVisible, setSaveModalVisible] = useState(false);
+  const [screenshotPaths, setScreenshotPaths] = useState([]);
 
   // Configurações para os screenshots
   const [config, setConfig] = useState({
@@ -43,11 +45,14 @@ export const ScreenshotTool = () => {
       setIsLoading(true);
       setError(null);
       setResult(null);
+      setScreenshotPaths([]);
 
       const response = await window.electronAPI.takeScreenshots(config);
 
       if (response.success) {
         setResult(response);
+        setScreenshotPaths(response.screenshotPaths || []);
+        setSaveModalVisible(true);
       } else {
         setError(response.error || "Erro desconhecido ao capturar screenshots");
       }
@@ -58,10 +63,53 @@ export const ScreenshotTool = () => {
     }
   };
 
+  // Função para mover os arquivos para um diretório selecionado pelo usuário
+  const handleSaveToDirectory = async () => {
+    try {
+      // Pedir ao usuário para selecionar um diretório
+      const targetDir = await window.electronAPI.selectSaveDirectory();
+
+      if (!targetDir) {
+        setSaveModalVisible(false);
+        return; // Usuário cancelou
+      }
+
+      // Mover os arquivos para o diretório selecionado
+      const moveResult = await window.electronAPI.moveFiles({
+        sourceDir: "screenshots",
+        targetDir: targetDir,
+        fileList: screenshotPaths,
+      });
+
+      if (moveResult.success) {
+        setResult((prev) => ({
+          ...prev,
+          extraInfo: `Arquivos movidos para: ${targetDir}\n${moveResult.message}`,
+        }));
+      } else {
+        setError(`Erro ao mover screenshots: ${moveResult.error}`);
+      }
+
+      setSaveModalVisible(false);
+    } catch (err) {
+      console.error("Erro ao salvar em outro diretório:", err);
+      setError(
+        `Erro ao salvar em outro diretório: ${
+          err.message || "Erro desconhecido"
+        }`
+      );
+      setSaveModalVisible(false);
+    }
+  };
+
+  // Função para fechar o modal e manter os arquivos no local original
+  const handleKeepFiles = () => {
+    setSaveModalVisible(false);
+  };
+
   return (
     <div className="screenshot-tool">
-      {/* Removida a tag h2 que duplicava o título, já que agora temos um título na card */}
-
+      {/* Configurações básicas */}
       <div className="config-section">
         <h3>Configurações Básicas</h3>
         <div className="form-group">
@@ -88,6 +136,7 @@ export const ScreenshotTool = () => {
         </div>
       </div>
 
+      {/* Dados do formulário */}
       <div className="config-section">
         <h3>Dados do Formulário</h3>
         {Object.entries(config.formData).map(([field, value]) => (
@@ -103,6 +152,7 @@ export const ScreenshotTool = () => {
         ))}
       </div>
 
+      {/* Dados específicos */}
       <div className="config-section">
         <h3>Dados Específicos</h3>
         {Object.entries(config.specificData).map(([field, value]) => (
@@ -140,11 +190,83 @@ export const ScreenshotTool = () => {
         <div className="result-message">
           <h4>Screenshots capturados com sucesso!</h4>
           <p>Total de screenshots: {result.screenshotPaths?.length || 0}</p>
+
+          {result.extraInfo && (
+            <div className="mt-3 p-2 bg-info bg-opacity-10 rounded">
+              <p className="mb-0">{result.extraInfo}</p>
+            </div>
+          )}
+
           <ul>
             {result.screenshotPaths?.map((path, index) => (
               <li key={index}>{path}</li>
             ))}
           </ul>
+
+          {!saveModalVisible && screenshotPaths.length > 0 && (
+            <div className="mt-3">
+              <button
+                className="btn btn-outline-primary"
+                onClick={() => setSaveModalVisible(true)}
+              >
+                <i className="bi bi-folder-symlink me-2"></i>
+                Salvar screenshots em outro local
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Modal para perguntar se quer mover os screenshots */}
+      {saveModalVisible && (
+        <div className="modal-overlay">
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Salvar screenshots</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={handleKeepFiles}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <p>
+                  Os screenshots foram capturados com sucesso na pasta padrão{" "}
+                  <code>screenshots</code>.
+                </p>
+                <p>
+                  Deseja salvar os screenshots em outro local? Os arquivos serão
+                  movidos do local atual.
+                </p>
+                <div className="mt-2">
+                  <strong>Screenshots capturados:</strong>
+                  <ul className="mt-2 screenshot-list">
+                    {screenshotPaths.map((path, index) => (
+                      <li key={index}>{path}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleKeepFiles}
+                >
+                  Manter no local atual
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleSaveToDirectory}
+                >
+                  <i className="bi bi-folder-symlink me-2"></i>
+                  Escolher outro local
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
