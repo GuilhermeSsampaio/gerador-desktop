@@ -6,11 +6,11 @@
   "scripts": {
     "dev": "vite",
     "electron": "electron .",
-    "start": "npm run setup && concurrently \"npm run dev\" \"npm run electron\"",
+    "start": "npm run setup && venv\\scripts\\activate && concurrently \"npm run dev\" \"npm run electron\"",
     "test": "echo \"Error: no test specified\" && exit 1",
     "setup": "python setup.py"
   },
-  "author": "Jane Doe",
+  "author": "Guilherme Sampaio",
   "license": "MIT",
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
