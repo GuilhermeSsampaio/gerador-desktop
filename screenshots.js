@@ -209,44 +209,42 @@ async function showConfirmationModal(page) {
  */
 async function fillSpecificData(page, specificData = {}) {
   const screenshotPaths = [];
-  await page.waitForSelector(".p-dropdown");
-  const dropdowns = await page.$$(".p-dropdown");
-
-  // Dados padrão mesclados com os fornecidos
   const data = {
-    estilo: "Elegante",
-    origem: "Brasileiro",
-    experiencia: "20",
+    estilo: { value: "Elegante", inputType: "dropdown" },
+    origem: { value: "Brasileiro", inputType: "dropdown" },
+    anos_experiência: { value: "20", inputType: "input" },
     ...specificData,
   };
 
-  // Seleciona o primeiro dropdown (estilo)
-  await dropdowns[0].click();
-  await page.waitForSelector(".p-dropdown-panel");
-  await page.evaluate((optionText) => {
-    const items = Array.from(document.querySelectorAll("li.p-dropdown-item"));
-    const target = items.find((item) => item.textContent.trim() === optionText);
-    if (target) target.click();
-  }, data.estilo);
-  await delay(100);
+  const dropdowns = await page.$$(".p-dropdown"); // Seleciona todos os dropdowns na página
 
-  // Seleciona o segundo dropdown (origem)
-  await dropdowns[1].click();
-  await page.waitForSelector(".p-dropdown-panel");
-  await page.evaluate((optionText) => {
-    const items = Array.from(document.querySelectorAll("li.p-dropdown-item"));
-    const target = items.find((item) => item.textContent.trim() === optionText);
-    if (target) target.click();
-  }, data.origem);
-  await delay(100);
+  let dropdownIndex = 0; // Índice para iterar sobre os dropdowns encontrados
 
-  // Preenche o campo de anos de experiência
-  await fillInputNumberUsingKeyboard(
-    page,
-    'input[name="anos_experiência"]',
-    data.experiencia
-  );
-  await delay(100);
+  for (const [key, { value, inputType }] of Object.entries(data)) {
+    if (inputType === "dropdown") {
+      const dropdown = dropdowns[dropdownIndex];
+      if (dropdown) {
+        await dropdown.click(); // Abre o dropdown
+        await page.waitForSelector(".p-dropdown-panel");
+        await page.evaluate((optionText) => {
+          const items = Array.from(
+            document.querySelectorAll("li.p-dropdown-item")
+          );
+          const targetItem = items.find(
+            (item) => item.textContent.trim() === optionText
+          );
+          if (targetItem) targetItem.click();
+        }, value);
+        dropdownIndex++; // Avança para o próximo dropdown
+      } else {
+        console.warn(`Dropdown não encontrado para a chave: ${key}`);
+      }
+    } else if (inputType === "input") {
+      const inputSelector = `input[name="${key}"]`;
+      await page.waitForSelector(inputSelector);
+      await fillInputNumberUsingKeyboard(page, inputSelector, value);
+    }
+  }
 
   screenshotPaths.push(await takeScreenshot(page, "dados_especificos.png"));
   await delay(2000);

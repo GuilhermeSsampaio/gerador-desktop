@@ -24,7 +24,7 @@ export const ScreenshotTool = () => {
     specificData: {
       estilo: "Elegante",
       origem: "Brasileiro",
-      experiencia: "15",
+      anos_experiência: "15",
     },
   });
 
@@ -49,7 +49,10 @@ export const ScreenshotTool = () => {
     const newSpecificData = {};
     updatedFields.forEach((field) => {
       if (field.key.trim()) {
-        newSpecificData[field.key] = field.value;
+        newSpecificData[field.key] = {
+          value: field.value,
+          inputType: field.inputType || "input",
+        };
       }
     });
 
@@ -71,6 +74,14 @@ export const ScreenshotTool = () => {
   const handleSpecificFieldValueChange = (index, newValue) => {
     const updatedFields = [...specificFields];
     updatedFields[index].value = newValue;
+    setSpecificFields(updatedFields);
+    updateSpecificDataConfig(updatedFields);
+  };
+
+  // Atualiza o tipo de campo específico (input ou dropdown)
+  const handleSpecificFieldInputTypeChange = (index, newInputType) => {
+    const updatedFields = [...specificFields];
+    updatedFields[index].inputType = newInputType;
     setSpecificFields(updatedFields);
     updateSpecificDataConfig(updatedFields);
   };
@@ -223,8 +234,20 @@ export const ScreenshotTool = () => {
                   handleSpecificFieldKeyChange(index, e.target.value)
                 }
               />
+              <select
+                className="form-control me-2"
+                value={field.inputType || "input"}
+                onChange={(e) =>
+                  handleSpecificFieldInputTypeChange(index, e.target.value)
+                }
+              >
+                <option value="input">Input</option>
+                <option value="dropdown">Dropdown</option>
+              </select>
               <input
-                type="text"
+                type={
+                  field.inputType === "dropdown" ? "text" : field.type || "text"
+                }
                 className="form-control me-2"
                 placeholder="Valor"
                 value={field.value}
