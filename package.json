@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "electron": "electron .",
-    "start": "venv\\Scripts\\activate && pip install -r requirements.txt && concurrently \"npm run dev\" \"npm run electron\"",
+    "start": "npm run setup && concurrently \"npm run dev\" \"npm run electron\"",
     "test": "echo \"Error: no test specified\" && exit 1",
     "setup": "python setup.py"
   },
