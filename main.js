@@ -3,6 +3,9 @@ const path = require("path");
 const { spawn } = require("child_process");
 const screenshotModule = require("./screenshots");
 const fs = require("fs");
+// require("electron-reload")(__dirname, {
+//   electron: require(`${__dirname}/node_modules/electron`),
+// });
 
 function createWindow() {
   const win = new BrowserWindow({

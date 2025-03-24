@@ -12,6 +12,11 @@ export const ScreenshotTool = () => {
   const [config, setConfig] = useState({
     baseUrl: "http://localhost:3000",
     userType: "Maestro",
+    captureMode: "all",
+    credentials: {
+      cpf: "123.456.789-10",
+      senha: "senha123",
+    },
     formData: {
       cpf: "123.456.789-10",
       nome: "Usuário Teste",
@@ -27,6 +32,21 @@ export const ScreenshotTool = () => {
       anos_experiência: "15",
     },
   });
+
+  // Lista de modos de captura disponíveis
+  const captureModes = [
+    { value: "all", label: "Todos os screenshots" },
+    { value: "login", label: "Página de login" },
+    { value: "loginFilled", label: "Login preenchido" },
+    { value: "userLoggedIn", label: "Usuário logado (homepage)" },
+    { value: "userConsultation", label: "Consulta de dados do usuário" },
+    {
+      value: "specificUserRegistration",
+      label: "Cadastro de usuário específico",
+    },
+    { value: "formErrors", label: "Formulário com erros" },
+    { value: "formComplete", label: "Fluxo completo de cadastro" },
+  ];
 
   // Estado para gerenciar os campos específicos do usuário
   const [specificFields, setSpecificFields] = useState(
@@ -191,6 +211,49 @@ export const ScreenshotTool = () => {
             value={config.userType}
             onChange={(e) => setConfig({ ...config, userType: e.target.value })}
             placeholder="Digite o perfil do usuário"
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="captureMode">Modo de Captura:</label>
+          <select
+            id="captureMode"
+            className="form-control"
+            value={config.captureMode}
+            onChange={(e) =>
+              setConfig({ ...config, captureMode: e.target.value })
+            }
+          >
+            {captureModes.map((mode) => (
+              <option key={mode.value} value={mode.value}>
+                {mode.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Credenciais para login */}
+      <div className="config-section">
+        <h3>Credenciais de Login</h3>
+        <div className="form-group">
+          <label htmlFor="credentialsCpf">CPF:</label>
+          <input
+            type="text"
+            id="credentialsCpf"
+            value={config.credentials.cpf}
+            onChange={(e) => handleChange("credentials", "cpf", e.target.value)}
+          />
+        </div>
+        <div className="form-group">
+          <label htmlFor="credentialsSenha">Senha:</label>
+          <input
+            type="password"
+            id="credentialsSenha"
+            value={config.credentials.senha}
+            onChange={(e) =>
+              handleChange("credentials", "senha", e.target.value)
+            }
           />
         </div>
       </div>

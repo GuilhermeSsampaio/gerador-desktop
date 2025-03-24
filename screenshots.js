@@ -67,6 +67,26 @@ async function clickButtonByText(page, buttonText, contextSelector = null) {
   );
 }
 
+async function clickButtonFinishRegister(page, textOptions) {
+  for (const text of textOptions) {
+    const buttons = await page.$$("button");
+    for (const button of buttons) {
+      const label = await button.$("span.p-button-label");
+      if (label) {
+        const labelText = await page.evaluate(
+          (el) => el.textContent.trim(),
+          label
+        );
+        if (textOptions.includes(labelText)) {
+          await button.click();
+          return;
+        }
+      }
+    }
+  }
+  throw new Error("Botão não encontrado!");
+}
+
 /**
  * Screenshot da página de login para usuário não cadastrado.
  */
@@ -248,9 +268,12 @@ async function fillSpecificData(page, specificData = {}) {
 
   screenshotPaths.push(await takeScreenshot(page, "dados_especificos.png"));
   await delay(2000);
-  await clickButtonByText(page, "Cadastrar");
+  await clickButtonFinishRegister(page, ["Cadastrar", "Alterar"]);
+  await delay(1000);
   screenshotPaths.push(await takeScreenshot(page, "cadastro_finalizado.png"));
-
+  await delay(1000);
+  screenshotPaths.push(await takeScreenshot(page, "homepage.png"));
+  await delay(100);
   return screenshotPaths;
 }
 
@@ -270,30 +293,242 @@ async function fillInputNumberUsingKeyboard(page, selector, value) {
 }
 
 /**
+ * Tira screenshot da tela de login preenchida
+ */
+async function screenshotFilledLoginPage(
+  baseUrl = "http://localhost:3000/",
+  credentials = {}
+) {
+  const { browser, page } = await openPage(baseUrl);
+  try {
+    const loginData = {
+      cpf: "123.456.789-49",
+      senha: "senha123",
+      ...credentials,
+    };
+
+    // Preenche os campos de login
+    await page.waitForSelector('input[name="nome_login"]');
+    await page.type('input[name="nome_login"]', loginData.cpf);
+
+    await page.waitForSelector('input[name="senha"]');
+    await page.type('input[name="senha"]', loginData.senha);
+
+    await delay(500);
+    const screenshotPath = await takeScreenshot(page, "login_preenchido.png");
+    return screenshotPath;
+  } catch (error) {
+    console.error("Erro ao capturar tela de login preenchida:", error);
+    throw error;
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
+ * Faz login no sistema e captura a tela inicial do usuário logado
+ */
+async function loginAndCaptureHomepage(
+  baseUrl = "http://localhost:3000/",
+  credentials = {}
+) {
+  const { browser, page } = await openPage(baseUrl);
+  try {
+    const loginData = {
+      cpf: "123.456.789-49",
+      senha: "senha123",
+      ...credentials,
+    };
+
+    // Preenche os campos de login
+    await page.waitForSelector('input[name="nome_login"]');
+    await page.type('input[name="nome_login"]', loginData.cpf);
+
+    await page.waitForSelector('input[name="senha"]');
+    await page.type('input[name="senha"]', loginData.senha);
+
+    // Clica no botão de login
+    await clickButtonByText(page, "Entrar");
+    clickButtonFinishRegister(page, ["Login"]);
+
+    // Aguarda a navegação para a página inicial após login
+    await page.waitForNavigation({ waitUntil: "networkidle2" });
+    await delay(1000);
+
+    const screenshotPath = await takeScreenshot(
+      page,
+      "usuario_logado_homepage.png"
+    );
+    return { browser, page, screenshotPath };
+  } catch (error) {
+    console.error("Erro ao fazer login e capturar homepage:", error);
+    await browser.close();
+    throw error;
+  }
+}
+
+/**
+ * Captura a tela de consulta de dados do usuário logado
+ */
+async function captureUserDataConsultation(
+  baseUrl = "http://localhost:3000/",
+  credentials = {}
+) {
+  let browser, page;
+  try {
+    // Usa a função de login para obter uma sessão autenticada
+    const result = await loginAndCaptureHomepage(baseUrl, credentials);
+    browser = result.browser;
+    page = result.page;
+
+    // Navega para a página de consulta de dados (via sidebar)
+    await page.waitForSelector(".p-sidebar, .sidebar");
+
+    // Clica no menu "Cadastrar usuário" no sidebar
+    await page.evaluate(() => {
+      const menuItems = Array.from(
+        document.querySelectorAll(".p-menuitem, .menu-item")
+      );
+      const targetItem = menuItems.find((item) =>
+        item.textContent.includes("Cadastrar usuário")
+      );
+      if (targetItem) targetItem.click();
+    });
+
+    await delay(1000);
+    const screenshotPath = await takeScreenshot(
+      page,
+      "consulta_dados_usuario.png"
+    );
+    return screenshotPath;
+  } catch (error) {
+    console.error("Erro ao capturar tela de consulta de dados:", error);
+    throw error;
+  } finally {
+    if (browser) await browser.close();
+  }
+}
+
+/**
+ * Captura a tela de cadastro de usuário específico (Maestro)
+ */
+async function captureSpecificUserRegistration(
+  baseUrl = "http://localhost:3000/",
+  credentials = {},
+  userType = "Maestro"
+) {
+  let browser, page;
+  try {
+    // Usa a função de login para obter uma sessão autenticada
+    const result = await loginAndCaptureHomepage(baseUrl, credentials);
+    browser = result.browser;
+    page = result.page;
+
+    // Navega para a página de cadastro específico (via sidebar)
+    await page.waitForSelector(".p-sidebar, .sidebar");
+
+    // Clica no menu "Cadastrar [userType]" no sidebar
+    await page.evaluate((tipo) => {
+      const menuItems = Array.from(
+        document.querySelectorAll(".p-menuitem, .menu-item")
+      );
+      const targetItem = menuItems.find((item) =>
+        item.textContent.includes(`Cadastrar ${tipo}`)
+      );
+      if (targetItem) targetItem.click();
+    }, userType);
+
+    await delay(1000);
+    const screenshotPath = await takeScreenshot(
+      page,
+      `cadastro_${userType.toLowerCase()}.png`
+    );
+    return screenshotPath;
+  } catch (error) {
+    console.error(`Erro ao capturar tela de cadastro de ${userType}:`, error);
+    throw error;
+  } finally {
+    if (browser) await browser.close();
+  }
+}
+
+/**
  * Função principal que executa os testes desejados.
  */
 async function executarTestes(options = {}) {
-  const { baseUrl, userType, formData, specificData } = options;
+  const {
+    baseUrl,
+    userType,
+    formData,
+    specificData,
+    credentials,
+    captureMode,
+  } = options;
 
   const screenshotPaths = [];
+  const mode = captureMode || "all";
 
   try {
-    // Captura página de login
-    const loginPath = await screenshotLoginPage(baseUrl);
-    screenshotPaths.push(loginPath);
+    if (mode === "all" || mode === "login") {
+      // Captura página de login
+      const loginPath = await screenshotLoginPage(baseUrl);
+      screenshotPaths.push(loginPath);
+    }
 
-    // Captura formulário com erros
-    const errorPath = await fillFormWithErrors(baseUrl, userType);
-    screenshotPaths.push(errorPath);
+    // Primeiro o cadastro de usuário para garantir que existe um usuário para login
+    if (mode === "all" || mode === "formComplete") {
+      // Captura fluxo completo de formulário preenchido corretamente
+      const formPaths = await fillFormCorrectly(
+        baseUrl,
+        userType,
+        formData,
+        specificData
+      );
+      screenshotPaths.push(...formPaths);
+    }
 
-    // Captura fluxo completo de formulário preenchido corretamente
-    const formPaths = await fillFormCorrectly(
-      baseUrl,
-      userType,
-      formData,
-      specificData
-    );
-    screenshotPaths.push(...formPaths);
+    if (mode === "all" || mode === "formErrors") {
+      // Captura formulário com erros
+      const errorPath = await fillFormWithErrors(baseUrl, userType);
+      screenshotPaths.push(errorPath);
+    }
+
+    if (mode === "all" || mode === "specificUserRegistration") {
+      // Captura tela de cadastro de usuário específico - requer login prévio
+      const registrationPath = await captureSpecificUserRegistration(
+        baseUrl,
+        credentials,
+        userType
+      );
+      screenshotPaths.push(registrationPath);
+    }
+
+    if (mode === "all" || mode === "loginFilled") {
+      // Captura tela de login preenchida
+      const filledLoginPath = await screenshotFilledLoginPage(
+        baseUrl,
+        credentials
+      );
+      screenshotPaths.push(filledLoginPath);
+    }
+
+    if (mode === "all" || mode === "userLoggedIn") {
+      // Captura tela do usuário logado
+      const { screenshotPath } = await loginAndCaptureHomepage(
+        baseUrl,
+        credentials
+      );
+      screenshotPaths.push(screenshotPath);
+    }
+
+    if (mode === "all" || mode === "userConsultation") {
+      // Captura tela de consulta de dados do usuário
+      const consultationPath = await captureUserDataConsultation(
+        baseUrl,
+        credentials
+      );
+      screenshotPaths.push(consultationPath);
+    }
 
     return screenshotPaths;
   } catch (error) {
@@ -306,6 +541,10 @@ async function executarTestes(options = {}) {
 module.exports = {
   executarTestes,
   screenshotLoginPage,
+  screenshotFilledLoginPage,
+  loginAndCaptureHomepage,
+  captureUserDataConsultation,
+  captureSpecificUserRegistration,
   fillFormWithErrors,
   fillFormCorrectly,
   screenshotDir,
