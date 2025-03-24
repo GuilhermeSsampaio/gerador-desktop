@@ -1,5 +1,7 @@
 # Assistente de Documentação Automática
 
+## OBS: os prints utilizam os nomes dos campos para preencher, logo se você deseja usar os prints automáticos, utilize o mesmo padrão de nomes do prof joinville nos dados padrões do form, com acentos e tudo mais, pois fiz com base nesse padrão, senão vai ocorrer um erro.
+
 Esta aplicação desktop oferece ferramentas para facilitar a documentação de projetos de software, incluindo geração automática de documentação a partir dos códigos-fonte e captura automática de screenshots.
 
 ![Interface da Aplicação](./images/app_interface1.png)
