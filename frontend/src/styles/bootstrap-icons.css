@@ -1,0 +1,74 @@
+@font-face {
+  font-display: block;
+  font-family: "bootstrap-icons";
+  src: url("/assets/fonts/bootstrap-icons.woff2") format("woff2"),
+    url("/assets/fonts/bootstrap-icons.woff") format("woff");
+}
+
+.bi::before,
+[class^="bi-"]::before,
+[class*=" bi-"]::before {
+  display: inline-block;
+  font-family: bootstrap-icons !important;
+  font-style: normal;
+  font-weight: normal !important;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+  vertical-align: -0.125em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Bootstrap Icons - copie aqui os ícones específicos que você está usando */
+.bi-camera::before {
+  content: "\f214";
+}
+.bi-check-circle-fill::before {
+  content: "\f26a";
+}
+.bi-chevron-down::before {
+  content: "\f282";
+}
+.bi-chevron-right::before {
+  content: "\f285";
+}
+.bi-exclamation-triangle::before {
+  content: "\f33a";
+}
+.bi-exclamation-triangle-fill::before {
+  content: "\f33c";
+}
+.bi-file-earmark::before {
+  content: "\f371";
+}
+.bi-file-earmark-text::before {
+  content: "\f387";
+}
+.bi-file-text::before {
+  content: "\f38e";
+}
+.bi-folder::before {
+  content: "\f3ca";
+}
+.bi-folder-plus::before {
+  content: "\f3dd";
+}
+.bi-folder-symlink::before {
+  content: "\f3e9";
+}
+.bi-hdd-rack::before {
+  content: "\f40f";
+}
+.bi-info-circle::before {
+  content: "\f431";
+}
+.bi-plus-circle::before {
+  content: "\f4f5";
+}
+.bi-trash::before {
+  content: "\f5de";
+}
+.bi-window::before {
+  content: "\f62c";
+}

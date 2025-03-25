@@ -1,15 +1,18 @@
 {
-  "name": "my-electron-app",
+  "name": "gerador-desktop",
   "version": "1.0.0",
-  "description": "Hello World!",
-  "main": "main.js",
+  "description": "Assistente de Documentação Automática",
+  "main": "electron/main.js",
   "scripts": {
-    "dev": "vite",
+    "dev": "cd frontend && vite",
     "electron": "electron .",
-    "reload-electron": "nodemon --watch main.js --exec electron .",
+    "reload-electron": "nodemon --watch electron/main.js --exec electron .",
     "start": "npm run setup && venv\\scripts\\activate && concurrently \"npm run dev\" \"npm run reload-electron\"",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "setup": "python setup.py"
+    "setup": "python setup.py",
+    "build-frontend": "cd frontend && vite build",
+    "build": "npm run build-frontend && electron-builder",
+    "dist": "electron-builder"
   },
   "author": "Guilherme Sampaio",
   "license": "MIT",
@@ -17,6 +20,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "concurrently": "^8.2.2",
     "electron": "23.1.3",
+    "electron-builder": "^24.13.3",
     "nodemon": "^3.1.9",
     "vite": "^6.2.2"
   },
@@ -24,7 +28,24 @@
     "bootstrap": "^5.3.3",
     "bootstrap-icons": "^1.11.3",
     "puppeteer": "^24.4.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "build": {
+    "appId": "com.documentacao.gerador",
+    "productName": "Assistente de Documentação",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "build/**/*",
+      "electron/**/*",
+      "scripts/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "frontend/public/icon.ico"
+    }
   }
 }

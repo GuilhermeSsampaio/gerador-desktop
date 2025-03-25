@@ -1,0 +1,35 @@
+{
+  "appId": "com.seuprojeto.gerador",
+  "productName": "Gerador Desktop",
+  "directories": {
+    "output": "dist"
+  },
+  "files": [
+    "build/**/*",
+    "main.js",
+    "electron/**/*",
+    "gerador.py",
+    "format_docx.py",
+    "screenshots.js",
+    "requirements.txt"
+  ],
+  "extraResources": [
+    {
+      "from": "venv",
+      "to": "venv",
+      "filter": ["**/*"]
+    }
+  ],
+  "win": {
+    "target": "nsis",
+    "icon": "build/icon.ico"
+  },
+  "mac": {
+    "target": "dmg",
+    "icon": "build/icon.icns"
+  },
+  "linux": {
+    "target": "AppImage",
+    "icon": "build/icon.png"
+  }
+}
