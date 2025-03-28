@@ -493,42 +493,42 @@ async function executarTestes(options = {}) {
       screenshotPaths.push(errorPath);
     }
 
-    if (mode === "all" || mode === "specificUserRegistration") {
-      // Captura tela de cadastro de usuário específico - requer login prévio
-      const registrationPath = await captureSpecificUserRegistration(
-        baseUrl,
-        credentials,
-        userType
-      );
-      screenshotPaths.push(registrationPath);
-    }
+    // if (mode === "all" || mode === "specificUserRegistration") {
+    //   // Captura tela de cadastro de usuário específico - requer login prévio
+    //   const registrationPath = await captureSpecificUserRegistration(
+    //     baseUrl,
+    //     credentials,
+    //     userType
+    //   );
+    //   screenshotPaths.push(registrationPath);
+    // }
 
-    if (mode === "all" || mode === "loginFilled") {
-      // Captura tela de login preenchida
-      const filledLoginPath = await screenshotFilledLoginPage(
-        baseUrl,
-        credentials
-      );
-      screenshotPaths.push(filledLoginPath);
-    }
+    // if (mode === "all" || mode === "loginFilled") {
+    //   // Captura tela de login preenchida
+    //   const filledLoginPath = await screenshotFilledLoginPage(
+    //     baseUrl,
+    //     credentials
+    //   );
+    //   screenshotPaths.push(filledLoginPath);
+    // }
 
-    if (mode === "all" || mode === "userLoggedIn") {
-      // Captura tela do usuário logado
-      const { screenshotPath } = await loginAndCaptureHomepage(
-        baseUrl,
-        credentials
-      );
-      screenshotPaths.push(screenshotPath);
-    }
+    // if (mode === "all" || mode === "userLoggedIn") {
+    //   // Captura tela do usuário logado
+    //   const { screenshotPath } = await loginAndCaptureHomepage(
+    //     baseUrl,
+    //     credentials
+    //   );
+    //   screenshotPaths.push(screenshotPath);
+    // }
 
-    if (mode === "all" || mode === "userConsultation") {
-      // Captura tela de consulta de dados do usuário
-      const consultationPath = await captureUserDataConsultation(
-        baseUrl,
-        credentials
-      );
-      screenshotPaths.push(consultationPath);
-    }
+    // if (mode === "all" || mode === "userConsultation") {
+    //   // Captura tela de consulta de dados do usuário
+    //   const consultationPath = await captureUserDataConsultation(
+    //     baseUrl,
+    //     credentials
+    //   );
+    //   screenshotPaths.push(consultationPath);
+    // }
 
     return screenshotPaths;
   } catch (error) {

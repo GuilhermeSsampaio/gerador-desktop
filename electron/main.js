@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
 const { spawn } = require("child_process");
 const screenshotModule = require("../scripts/screenshots");
+const allInOneModule = require("../scripts/all_in_one");
 const fs = require("fs");
 
 function createWindow() {
@@ -237,4 +238,39 @@ ipcMain.handle("take-screenshots", async (event, args) => {
       error: error.message || "Erro desconhecido ao capturar screenshots",
     };
   }
+});
+
+// Adicionar handler para o processo completo
+ipcMain.handle("run-full-process", async (event, options) => {
+  console.log("Iniciando processo completo com opções:", options);
+
+  try {
+    const result = await allInOneModule.runFullProcess(options);
+    return result;
+  } catch (error) {
+    console.error("Erro no processo completo:", error);
+    return {
+      success: false,
+      error: error.message || "Erro desconhecido durante o processo completo",
+    };
+  }
+});
+
+// Adicionar handler para selecionar arquivo de especificação
+ipcMain.handle("select-spec-file", async () => {
+  const result = await dialog.showOpenDialog({
+    title: "Selecione o arquivo de especificação",
+    properties: ["openFile"],
+    filters: [
+      { name: "Documentos Word", extensions: ["docx"] },
+      { name: "Todos os arquivos", extensions: ["*"] },
+    ],
+    buttonLabel: "Selecionar",
+  });
+
+  if (result.canceled) {
+    return null;
+  }
+
+  return result.filePaths[0];
 });

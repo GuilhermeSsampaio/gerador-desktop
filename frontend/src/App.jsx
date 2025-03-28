@@ -3,6 +3,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 // Removida a importação do bootstrap-icons, já que está sendo feita no main.jsx
 import "../styles/styles.css";
 import { ScreenshotTool } from "./components/ScreenshotTool";
+import { FullProcess } from "./components/FullProcess";
 
 // Lista de arquivos e diretórios ignorados por padrão
 const defaultIgnoredDirs = [
@@ -40,7 +41,7 @@ function App() {
     includeEnv: false,
   });
 
-  // Estado para controlar qual ferramenta está ativa (documentação ou screenshots)
+  // Estado para controlar qual ferramenta está ativa (documentação, screenshots ou processo completo)
   const [activeTab, setActiveTab] = useState("docs");
 
   const [loading, setLoading] = useState(false);
@@ -420,6 +421,17 @@ function App() {
                 Captura de Screenshots
               </button>
             </li>
+            <li className="nav-item">
+              <button
+                className={`nav-link ${
+                  activeTab === "fullProcess" ? "active" : ""
+                }`}
+                onClick={() => setActiveTab("fullProcess")}
+              >
+                <i className="bi bi-check-circle-fill me-2"></i>
+                Processo Completo
+              </button>
+            </li>
           </ul>
         </div>
       </div>
@@ -691,7 +703,7 @@ function App() {
                 </div>
               )}
             </>
-          ) : (
+          ) : activeTab === "screenshots" ? (
             /* Ferramenta de captura de screenshots */
             <div className="card shadow">
               <div className="card-body">
@@ -700,6 +712,17 @@ function App() {
                   Ferramenta de Screenshots
                 </h4>
                 <ScreenshotTool />
+              </div>
+            </div>
+          ) : (
+            /* Ferramenta de processo completo */
+            <div className="card shadow">
+              <div className="card-body">
+                <h4 className="card-title mb-4">
+                  <i className="bi bi-check-circle-fill me-2"></i>
+                  Processo Completo de Entrega
+                </h4>
+                <FullProcess />
               </div>
             </div>
           )}
